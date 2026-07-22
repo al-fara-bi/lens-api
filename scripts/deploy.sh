@@ -102,11 +102,11 @@ ssh -o BatchMode=yes "$SSH_HOST" "
 bold "==> Verify"
 if $USE_TLS; then
     HEALTH_URL="https://$DOMAIN/api/health"
-    RESPONSE="$(curl -fsS --retry 20 --retry-delay 2 --retry-all-errors "$HEALTH_URL" || true)"
+    RESPONSE="$(curl -fsS --retry 20 --retry-delay 2 --retry-all-errors "$HEALTH_URL" 2>/dev/null || true)"
 else
     HEALTH_URL="http://localhost:8000/api/health (from inside the server)"
     RESPONSE="$(ssh -o BatchMode=yes "$SSH_HOST" \
-        "curl -fsS --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors http://localhost:8000/api/health" || true)"
+        "curl -fsS --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors http://localhost:8000/api/health 2>/dev/null" || true)"
 fi
 
 [[ -n "$RESPONSE" ]] || fail "health check returned nothing — check: ssh $SSH_HOST 'cd ~/$REMOTE_DIR && docker compose logs --tail 50'"
