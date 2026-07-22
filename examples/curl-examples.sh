@@ -2,7 +2,7 @@
 # Runnable examples for every endpoint and error path.
 #
 #   ./examples/curl-examples.sh                          # against localhost
-#   BASE_URL=https://recruit.faraby.xyz ./examples/curl-examples.sh
+#   BASE_URL=https://lens-api.farhat.one ./examples/curl-examples.sh
 set -u
 
 BASE_URL="${BASE_URL:-http://localhost:8000}"

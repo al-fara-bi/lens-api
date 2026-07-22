@@ -13,7 +13,7 @@ import os
 import tempfile
 from pathlib import Path
 
-_TMP_DIR = tempfile.mkdtemp(prefix="landing-api-tests-")
+_TMP_DIR = tempfile.mkdtemp(prefix="lens-api-tests-")
 
 os.environ.update(
     {

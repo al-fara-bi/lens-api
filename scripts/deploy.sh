@@ -16,7 +16,7 @@ set -euo pipefail
 
 SSH_HOST="${SSH_HOST:-vm-aws-london}"
 REMOTE_DIR="${REMOTE_DIR:-api}"
-DOMAIN="${DOMAIN:-api.farhat.one}"
+DOMAIN="${DOMAIN:-lens-api.farhat.one}"
 
 USE_TLS=false
 [[ "${1:-}" == "--tls" ]] && USE_TLS=true

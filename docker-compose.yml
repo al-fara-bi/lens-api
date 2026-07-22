@@ -3,7 +3,7 @@
 services:
   app:
     build: .
-    container_name: landing-api
+    container_name: lens-api
     env_file: .env
     environment:
       # Set by scripts/deploy.sh from the git tag; 'dev' when run by hand.

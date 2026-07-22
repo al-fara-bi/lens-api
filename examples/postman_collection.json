@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Developer Landing API",
+    "name": "Lens API",
     "description": "Contact form backend with AI analysis, rate limiting and file-based logging.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },

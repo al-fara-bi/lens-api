@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     )
 
     # ---------- app ----------
-    app_name: str = "Developer Landing API"
+    app_name: str = "Lens API"
     # Injected at deploy time from the git tag, so /api/health tells you exactly
     # which revision is running instead of a constant baked into the source.
     app_version: str = "dev"
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_use_tls: bool = True
     mail_from: str = ""
-    mail_from_name: str = "Developer Landing"
+    mail_from_name: str = "Lens"
     owner_email: str = ""
 
     # ---------- derived ----------
