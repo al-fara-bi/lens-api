@@ -1,0 +1,14 @@
+.env
+.env.local
+data/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.git/
+.gitignore
+.DS_Store
+tests/
+README.md

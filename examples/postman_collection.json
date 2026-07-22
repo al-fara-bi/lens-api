@@ -1,0 +1,70 @@
+{
+  "info": {
+    "name": "Developer Landing API",
+    "description": "Contact form backend with AI analysis, rate limiting and file-based logging.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Submit contact form (valid)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{base_url}}/api/contact", "host": ["{{base_url}}"], "path": ["api", "contact"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Ivan Petrov\",\n  \"phone\": \"+7 999 123-45-67\",\n  \"email\": \"ivan@example.com\",\n  \"comment\": \"Hello! I would like to discuss a backend project for our team.\"\n}"
+        },
+        "description": "Expected: 201 Created with submission_id, ai_status and email_sent."
+      }
+    },
+    {
+      "name": "Submit contact form (validation error)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": { "raw": "{{base_url}}/api/contact", "host": ["{{base_url}}"], "path": ["api", "contact"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"I\",\n  \"phone\": \"abc\",\n  \"email\": \"not-an-email\",\n  \"comment\": \"short\"\n}"
+        },
+        "description": "Expected: 422 with a details array naming each invalid field."
+      }
+    },
+    {
+      "name": "Submit contact form (rate limit probe)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Forwarded-For", "value": "203.0.113.99" }
+        ],
+        "url": { "raw": "{{base_url}}/api/contact", "host": ["{{base_url}}"], "path": ["api", "contact"] },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rate Probe\",\n  \"phone\": \"+79991234567\",\n  \"email\": \"probe@example.com\",\n  \"comment\": \"Rate limit probe message.\"\n}"
+        },
+        "description": "Send repeatedly. After the configured limit: 429 with a Retry-After header."
+      }
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/api/health", "host": ["{{base_url}}"], "path": ["api", "health"] },
+        "description": "Reports database connectivity plus AI and SMTP configuration state."
+      }
+    },
+    {
+      "name": "Metrics",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/api/metrics", "host": ["{{base_url}}"], "path": ["api", "metrics"] },
+        "description": "Aggregated submission statistics computed from the database."
+      }
+    }
+  ]
+}

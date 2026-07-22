@@ -1,0 +1,19 @@
+# secrets
+.env
+.env.local
+
+# runtime data (logs, sqlite db, rate-limit state)
+data/
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/

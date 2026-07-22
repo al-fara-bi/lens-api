@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:24px;background:#f4f5f7;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2328;">
+  <div style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px;">
+    <h2 style="margin:0 0 4px;font-size:19px;">New contact request</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:13px;">
+      Received {{ submission.created_at.strftime('%Y-%m-%d %H:%M UTC') }}
+      &middot; ID {{ submission.id }}
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:6px 0;color:#6b7280;width:110px;">Name</td><td>{{ submission.name }}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Email</td><td><a href="mailto:{{ submission.email }}">{{ submission.email }}</a></td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Phone</td><td>{{ submission.phone }}</td></tr>
+      {% if submission.client_ip %}
+      <tr><td style="padding:6px 0;color:#6b7280;">IP</td><td>{{ submission.client_ip }}</td></tr>
+      {% endif %}
+    </table>
+
+    <h3 style="margin:24px 0 8px;font-size:15px;">Message</h3>
+    <div style="white-space:pre-wrap;background:#f9fafb;border-left:3px solid #d1d5db;padding:14px;border-radius:0 6px 6px 0;font-size:14px;">{{ submission.comment }}</div>
+
+    {% if analysis.status.value == 'ok' %}
+    <h3 style="margin:24px 0 8px;font-size:15px;">AI analysis
+      <span style="font-weight:400;color:#9ca3af;font-size:12px;">via {{ analysis.provider }}</span>
+    </h3>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr><td style="padding:6px 0;color:#6b7280;width:110px;">Sentiment</td><td>{{ analysis.sentiment.value }}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;">Category</td><td>{{ analysis.category.value }}</td></tr>
+    </table>
+    {% if analysis.suggested_reply %}
+    <h3 style="margin:20px 0 8px;font-size:15px;">Suggested reply</h3>
+    <div style="white-space:pre-wrap;background:#eff6ff;border-left:3px solid #60a5fa;padding:14px;border-radius:0 6px 6px 0;font-size:14px;">{{ analysis.suggested_reply }}</div>
+    <p style="margin:10px 0 0;color:#6b7280;font-size:12px;">Draft only — review before sending.</p>
+    {% endif %}
+    {% else %}
+    <p style="margin:24px 0 0;padding:12px 14px;background:#fef3c7;border-radius:6px;font-size:13px;color:#92400e;">
+      AI analysis was unavailable for this message, so it is not classified.
+      The request itself was stored normally.
+    </p>
+    {% endif %}
+  </div>
+</body>
+</html>

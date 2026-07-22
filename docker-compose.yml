@@ -1,0 +1,20 @@
+# Local / reviewer setup: the API alone, reachable on http://localhost:8000.
+# Production adds TLS via docker-compose.prod.yml.
+services:
+  app:
+    build: .
+    container_name: landing-api
+    env_file: .env
+    environment:
+      # Set by scripts/deploy.sh from the git tag; 'dev' when run by hand.
+      APP_VERSION: ${APP_VERSION:-dev}
+    ports:
+      - "8000:8000"
+    volumes:
+      # Named volume, not a bind mount: the SQLite database, request logs and
+      # rate-limit state survive `docker compose down` and image rebuilds.
+      - api-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  api-data:

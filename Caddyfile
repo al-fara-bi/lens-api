@@ -1,0 +1,21 @@
+# Automatic HTTPS: Caddy obtains and renews the Let's Encrypt certificate itself.
+# Requires the domain's A record to point at this host, and Cloudflare proxying
+# to be off (grey cloud) while the certificate is first issued.
+recruit.faraby.xyz {
+	reverse_proxy app:8000
+
+	encode gzip zstd
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output file /data/access.log
+		format json
+	}
+}
