@@ -90,12 +90,14 @@ class AIService:
 
 def build_ai_service(settings: Settings) -> AIService:
     """Assemble the chain from AI_PROVIDER_CHAIN, preserving configured order."""
+    from app.services.ai.anthropic_provider import AnthropicAnalyzer
     from app.services.ai.gemini import GeminiAnalyzer
     from app.services.ai.openai_provider import OpenAIAnalyzer
 
     registry: dict[str, type] = {
         "gemini": GeminiAnalyzer,
         "openai": OpenAIAnalyzer,
+        "anthropic": AnthropicAnalyzer,
     }
 
     providers: list[AIAnalyzer] = []

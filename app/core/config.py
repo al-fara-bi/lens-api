@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-opus-4-8"
+
     # ---------- mail ----------
     smtp_host: str = ""
     smtp_port: int = 587
