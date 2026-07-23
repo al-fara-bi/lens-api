@@ -167,3 +167,42 @@ def test_parse_analysis_coerces_unknown_enum_values() -> None:
 def test_parse_analysis_rejects_malformed_json() -> None:
     with pytest.raises(ValueError):
         parse_analysis("not json at all", "test")
+
+
+def test_missing_provider_sdk_does_not_break_the_chain(monkeypatch, caplog) -> None:
+    """A provider whose SDK is absent must be skipped, not raise at startup.
+
+    Regression guard: `anthropic` was listed in the chain but missing from
+    requirements.txt, and the eager import took the whole service down on boot —
+    an optional fallback preventing a working primary from starting.
+    """
+    import importlib
+
+    from app.core.config import Settings
+    from app.services.ai import service as service_module
+
+    real_import = importlib.import_module
+
+    def fail_for_anthropic(name: str, *args, **kwargs):
+        if name.endswith("anthropic_provider"):
+            raise ImportError("No module named 'anthropic'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(service_module.importlib, "import_module", fail_for_anthropic)
+
+    settings = Settings(_env_file=None, ai_provider_chain="anthropic,groq")
+    built = service_module.build_ai_service(settings)
+
+    assert [p.name for p in built.providers] == ["groq"]
+    assert "not installed" in caplog.text
+
+
+def test_unknown_provider_name_is_ignored() -> None:
+    from app.core.config import Settings
+    from app.services.ai.service import build_ai_service
+
+    built = build_ai_service(
+        Settings(_env_file=None, ai_provider_chain="nonexistent,groq")
+    )
+
+    assert [p.name for p in built.providers] == ["groq"]

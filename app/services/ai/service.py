@@ -17,6 +17,7 @@ fallback's, turning a resilience feature into a worse experience than having non
 """
 
 import asyncio
+import importlib
 import logging
 import time
 
@@ -92,27 +93,45 @@ class AIService:
         return fallback_analysis(reason)
 
 
+# module path -> class name, resolved lazily so an SDK that is not installed
+# costs only that one provider.
+PROVIDER_REGISTRY: dict[str, tuple[str, str]] = {
+    "groq": ("app.services.ai.groq", "GroqAnalyzer"),
+    "openai": ("app.services.ai.openai_provider", "OpenAIAnalyzer"),
+    "anthropic": ("app.services.ai.anthropic_provider", "AnthropicAnalyzer"),
+    "gemini": ("app.services.ai.gemini", "GeminiAnalyzer"),
+}
+
+
 def build_ai_service(settings: Settings) -> AIService:
-    """Assemble the chain from AI_PROVIDER_CHAIN, preserving configured order."""
-    from app.services.ai.anthropic_provider import AnthropicAnalyzer
-    from app.services.ai.gemini import GeminiAnalyzer
-    from app.services.ai.groq import GroqAnalyzer
-    from app.services.ai.openai_provider import OpenAIAnalyzer
+    """Assemble the chain from AI_PROVIDER_CHAIN, preserving configured order.
 
-    registry: dict[str, type] = {
-        "groq": GroqAnalyzer,
-        "openai": OpenAIAnalyzer,
-        "anthropic": AnthropicAnalyzer,
-        "gemini": GeminiAnalyzer,
-    }
-
+    Providers are optional by design, so their SDKs are treated as optional too.
+    Importing all four eagerly meant one missing package raised at startup and
+    the whole service refused to boot — an unconfigured fallback provider taking
+    down a working primary is the opposite of what the chain is for.
+    """
     providers: list[AIAnalyzer] = []
+
     for name in settings.ai_providers:
-        analyzer_cls = registry.get(name)
-        if analyzer_cls is None:
+        entry = PROVIDER_REGISTRY.get(name)
+        if entry is None:
             logger.warning("Unknown AI provider %r in AI_PROVIDER_CHAIN, ignoring", name)
             continue
-        providers.append(analyzer_cls(settings))
+
+        module_path, class_name = entry
+        try:
+            module = importlib.import_module(module_path)
+        except ImportError as exc:
+            logger.error(
+                "AI provider %r is listed but its SDK is not installed (%s); skipping. "
+                "Add it to requirements.txt or remove it from AI_PROVIDER_CHAIN.",
+                name,
+                exc,
+            )
+            continue
+
+        providers.append(getattr(module, class_name)(settings))
 
     if not providers:
         logger.warning("AI_PROVIDER_CHAIN produced no providers; every request will fall back")
