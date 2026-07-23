@@ -36,7 +36,11 @@ git rev-parse --git-dir >/dev/null 2>&1 || fail "not a git repository"
 
 # A dirty tree means the deployed code does not match any commit, so the version
 # label would be a lie. Allowed, but only deliberately.
-if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+#
+# `git status --porcelain` rather than `git diff-index`: the latter trusts cached
+# stat information and reports files as modified when only their mtime changed —
+# a rewrite with identical content is enough to trigger a spurious prompt.
+if [[ -n "$(git status --porcelain)" ]]; then
     printf '\033[33m  Working tree has uncommitted changes.\033[0m\n'
     git status --short | sed 's/^/    /'
     read -r -p "  Deploy anyway? [y/N] " reply
