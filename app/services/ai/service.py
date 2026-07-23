@@ -26,6 +26,17 @@ from app.services.ai.base import AIAnalyzer, fallback_analysis
 
 logger = logging.getLogger(__name__)
 
+# Provider SDKs raise exceptions carrying the whole HTTP error body. A single
+# Gemini 429 is ~2 KB of quota JSON, logged once per attempt — enough repeated
+# failures and the log file is mostly boilerplate. The leading part identifies
+# the problem; the rest is documentation links.
+MAX_PROVIDER_ERROR_CHARS = 300
+
+
+def _short(exc: Exception) -> str:
+    text = " ".join(str(exc).split())
+    return text if len(text) <= MAX_PROVIDER_ERROR_CHARS else text[:MAX_PROVIDER_ERROR_CHARS] + " …"
+
 
 class AIService:
     def __init__(self, providers: list[AIAnalyzer], timeout: float) -> None:
@@ -55,8 +66,9 @@ class AIService:
                 errors.append(f"{provider.name}: timeout after {self.timeout}s")
                 continue
             except Exception as exc:  # noqa: BLE001 - any provider failure falls through
-                logger.warning("%s failed: %s", provider.name, exc)
-                errors.append(f"{provider.name}: {exc}")
+                reason = _short(exc)
+                logger.warning("%s failed: %s", provider.name, reason)
+                errors.append(f"{provider.name}: {reason}")
                 continue
 
             elapsed = time.perf_counter() - started
