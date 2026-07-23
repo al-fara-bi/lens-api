@@ -21,10 +21,19 @@ os.environ.update(
         "DEBUG": "false",
         "DATA_DIR": _TMP_DIR,
         "DATABASE_URL": f"sqlite+aiosqlite:///{_TMP_DIR}/test.db",
-        # Emptied explicitly: a real key exported in the developer's shell would
-        # otherwise be picked up and the suite would make live, billable calls.
+        # No providers are built at all, so the suite cannot reach the network
+        # regardless of which keys happen to exist in .env or the shell.
+        #
+        # This is the primary guard: blanking keys one by one silently broke the
+        # moment a fourth provider was added and its key was picked up from .env,
+        # turning the suite into a live, billable caller. The chain logic itself
+        # is covered in test_ai_service.py using fake analyzers.
+        "AI_PROVIDER_CHAIN": "",
+        # Belt and braces — also blank every key that exists today.
         "GEMINI_API_KEY": "",
         "OPENAI_API_KEY": "",
+        "GROQ_API_KEY": "",
+        "ANTHROPIC_API_KEY": "",
         "SMTP_HOST": "",
         "MAIL_FROM": "",
         "OWNER_EMAIL": "",
