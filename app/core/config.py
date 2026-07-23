@@ -35,7 +35,11 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 3600
 
     # ---------- AI ----------
-    ai_provider_chain: str = "gemini,openai"
+    # Order is priority. Anthropic leads because it is the one with working
+    # quota; Gemini trails because its free tier is unavailable in this project's
+    # region, and a failing provider placed first would burn a timeout on every
+    # request before the chain moved on.
+    ai_provider_chain: str = "anthropic,openai,gemini"
     ai_timeout_seconds: float = 8.0
 
     gemini_api_key: str = ""
