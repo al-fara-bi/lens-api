@@ -1,12 +1,34 @@
 # Lens API
 
-*Contact form backend with AI analysis.*
-
 Бэкенд-сервис для лендинг-презентации разработчика: форма обратной связи с валидацией,
 AI-анализом входящих обращений, отправкой писем, файловым логированием и защитой от спама.
 
-**Живой API:** https://lens-api.farhat.one
-**Документация:** https://lens-api.farhat.one/docs
+| | |
+|---|---|
+| **Живой API** | https://lens-api.farhat.one |
+| **Swagger** | https://lens-api.farhat.one/docs |
+| **ReDoc** | https://lens-api.farhat.one/redoc |
+| **Состояние сервиса** | https://lens-api.farhat.one/api/health |
+| **Статистика** | https://lens-api.farhat.one/api/metrics |
+
+### Попробовать за десять секунд
+
+```bash
+curl -X POST https://lens-api.farhat.one/api/contact \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Иван Петров",
+    "phone": "+7 999 123-45-67",
+    "email": "ivan@example.com",
+    "comment": "Здравствуйте! Хотел бы обсудить backend-проект для нашей команды."
+  }'
+```
+
+В ответе придут `sentiment` и `category`, определённые моделью, а на указанный email —
+подтверждение. Ограничение: 5 обращений в час с одного IP.
+
+Больше примеров, включая ошибки валидации и срабатывание лимита, —
+в [`examples/`](examples/) (curl-скрипт и коллекция Postman).
 
 ---
 
