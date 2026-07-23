@@ -96,5 +96,7 @@ class ContactAcceptedData(BaseModel):
 
 class ContactResponse(BaseModel):
     success: bool = True
-    message: str = "Your message has been received. We will get back to you shortly."
+    # Shown to the visitor by the front-end, so it matches the language of the
+    # confirmation email rather than the language of the codebase.
+    message: str = "Ваше сообщение получено. Я свяжусь с вами в ближайшее время."
     data: ContactAcceptedData
