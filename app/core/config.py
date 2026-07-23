@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     )
 
     # ---------- app ----------
-    app_name: str = "Developer Landing API"
+    app_name: str = "Lens API"
     # Injected at deploy time from the git tag, so /api/health tells you exactly
     # which revision is running instead of a constant baked into the source.
     app_version: str = "dev"
@@ -35,7 +35,11 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 3600
 
     # ---------- AI ----------
-    ai_provider_chain: str = "gemini,openai"
+    # Order is priority. Anthropic leads because it is the one with working
+    # quota; Gemini trails because its free tier is unavailable in this project's
+    # region, and a failing provider placed first would burn a timeout on every
+    # request before the chain moved on.
+    ai_provider_chain: str = "groq,openai,anthropic,gemini"
     ai_timeout_seconds: float = 8.0
 
     gemini_api_key: str = ""
@@ -44,6 +48,17 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
+    groq_api_key: str = ""
+    # One of the two Groq models that support strict json_schema decoding; the
+    # smaller of the pair, which is plenty for a short classification.
+    groq_model: str = "openai/gpt-oss-20b"
+
+    anthropic_api_key: str = ""
+    # Lightest model in the line-up ($1/$5 per MTok) and the right fit here:
+    # the task is a short classification in the request path, not open-ended
+    # reasoning. Heavier models are a one-line change if quality ever falls short.
+    anthropic_model: str = "claude-haiku-4-5"
+
     # ---------- mail ----------
     smtp_host: str = ""
     smtp_port: int = 587
@@ -51,7 +66,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_use_tls: bool = True
     mail_from: str = ""
-    mail_from_name: str = "Developer Landing"
+    mail_from_name: str = "Lens"
     owner_email: str = ""
 
     # ---------- derived ----------

@@ -25,6 +25,24 @@ logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
 
+# The enum values are the storage and API contract and stay English; these are
+# purely for display, because the people reading these mailboxes are Russian
+# speakers. Kept here rather than on the model — presentation does not belong in
+# the domain layer.
+CATEGORY_LABELS = {
+    "job": "вакансия",
+    "collaboration": "сотрудничество",
+    "support": "поддержка",
+    "spam": "спам",
+    "other": "прочее",
+}
+
+SENTIMENT_LABELS = {
+    "positive": "положительная",
+    "neutral": "нейтральная",
+    "negative": "отрицательная",
+}
+
 
 class MailService:
     def __init__(self, settings: Settings) -> None:
@@ -67,12 +85,20 @@ class MailService:
     async def _send_owner_notification(
         self, submission: Submission, analysis: AIAnalysis
     ) -> bool:
-        subject = f"New contact request from {submission.name}"
-        if analysis.category:
-            subject = f"[{analysis.category.value}] {subject}"
+        subject = f"Новое обращение от {submission.name}"
+        if analysis.status.value == "ok" and analysis.category:
+            label = CATEGORY_LABELS.get(analysis.category.value, analysis.category.value)
+            subject = f"[{label}] {subject}"
 
         html = await self.env.get_template("owner_notification.html").render_async(
-            submission=submission, analysis=analysis
+            submission=submission,
+            analysis=analysis,
+            category_label=CATEGORY_LABELS.get(
+                analysis.category.value if analysis.category else "", ""
+            ),
+            sentiment_label=SENTIMENT_LABELS.get(
+                analysis.sentiment.value if analysis.sentiment else "", ""
+            ),
         )
         return await self._send(
             to=self.settings.owner_email,
@@ -89,7 +115,7 @@ class MailService:
         )
         return await self._send(
             to=submission.email,
-            subject="We received your message",
+            subject="Мы получили ваше сообщение",
             html=html,
         )
 

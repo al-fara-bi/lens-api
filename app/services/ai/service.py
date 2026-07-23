@@ -17,6 +17,7 @@ fallback's, turning a resilience feature into a worse experience than having non
 """
 
 import asyncio
+import importlib
 import logging
 import time
 
@@ -25,6 +26,21 @@ from app.schemas.contact import AIAnalysis, ContactRequest
 from app.services.ai.base import AIAnalyzer, fallback_analysis
 
 logger = logging.getLogger(__name__)
+
+# Provider SDKs raise exceptions carrying the whole HTTP error body. A single
+# Gemini 429 is ~2 KB of quota JSON, logged once per attempt — enough repeated
+# failures and the log file is mostly boilerplate.
+#
+# 600 rather than something tighter: the first ~300 characters of a Google error
+# are generic advice and documentation links, and the part that actually says
+# *why* (`limit: 0, model: ...`) comes right after. Cutting at 300 kept only the
+# boilerplate and threw away the diagnosis.
+MAX_PROVIDER_ERROR_CHARS = 600
+
+
+def _short(exc: Exception) -> str:
+    text = " ".join(str(exc).split())
+    return text if len(text) <= MAX_PROVIDER_ERROR_CHARS else text[:MAX_PROVIDER_ERROR_CHARS] + " …"
 
 
 class AIService:
@@ -55,8 +71,9 @@ class AIService:
                 errors.append(f"{provider.name}: timeout after {self.timeout}s")
                 continue
             except Exception as exc:  # noqa: BLE001 - any provider failure falls through
-                logger.warning("%s failed: %s", provider.name, exc)
-                errors.append(f"{provider.name}: {exc}")
+                reason = _short(exc)
+                logger.warning("%s failed: %s", provider.name, reason)
+                errors.append(f"{provider.name}: {reason}")
                 continue
 
             elapsed = time.perf_counter() - started
@@ -76,23 +93,45 @@ class AIService:
         return fallback_analysis(reason)
 
 
+# module path -> class name, resolved lazily so an SDK that is not installed
+# costs only that one provider.
+PROVIDER_REGISTRY: dict[str, tuple[str, str]] = {
+    "groq": ("app.services.ai.groq", "GroqAnalyzer"),
+    "openai": ("app.services.ai.openai_provider", "OpenAIAnalyzer"),
+    "anthropic": ("app.services.ai.anthropic_provider", "AnthropicAnalyzer"),
+    "gemini": ("app.services.ai.gemini", "GeminiAnalyzer"),
+}
+
+
 def build_ai_service(settings: Settings) -> AIService:
-    """Assemble the chain from AI_PROVIDER_CHAIN, preserving configured order."""
-    from app.services.ai.gemini import GeminiAnalyzer
-    from app.services.ai.openai_provider import OpenAIAnalyzer
+    """Assemble the chain from AI_PROVIDER_CHAIN, preserving configured order.
 
-    registry: dict[str, type] = {
-        "gemini": GeminiAnalyzer,
-        "openai": OpenAIAnalyzer,
-    }
-
+    Providers are optional by design, so their SDKs are treated as optional too.
+    Importing all four eagerly meant one missing package raised at startup and
+    the whole service refused to boot — an unconfigured fallback provider taking
+    down a working primary is the opposite of what the chain is for.
+    """
     providers: list[AIAnalyzer] = []
+
     for name in settings.ai_providers:
-        analyzer_cls = registry.get(name)
-        if analyzer_cls is None:
+        entry = PROVIDER_REGISTRY.get(name)
+        if entry is None:
             logger.warning("Unknown AI provider %r in AI_PROVIDER_CHAIN, ignoring", name)
             continue
-        providers.append(analyzer_cls(settings))
+
+        module_path, class_name = entry
+        try:
+            module = importlib.import_module(module_path)
+        except ImportError as exc:
+            logger.error(
+                "AI provider %r is listed but its SDK is not installed (%s); skipping. "
+                "Add it to requirements.txt or remove it from AI_PROVIDER_CHAIN.",
+                name,
+                exc,
+            )
+            continue
+
+        providers.append(getattr(module, class_name)(settings))
 
     if not providers:
         logger.warning("AI_PROVIDER_CHAIN produced no providers; every request will fall back")

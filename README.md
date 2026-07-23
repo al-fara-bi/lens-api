@@ -1,10 +1,12 @@
-# Developer Landing API
+# Lens API
+
+*Contact form backend with AI analysis.*
 
 Бэкенд-сервис для лендинг-презентации разработчика: форма обратной связи с валидацией,
 AI-анализом входящих обращений, отправкой писем, файловым логированием и защитой от спама.
 
-**Живой API:** https://recruit.faraby.xyz
-**Документация:** https://recruit.faraby.xyz/docs
+**Живой API:** https://lens-api.farhat.one
+**Документация:** https://lens-api.farhat.one/docs
 
 ---
 

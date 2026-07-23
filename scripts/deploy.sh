@@ -16,7 +16,7 @@ set -euo pipefail
 
 SSH_HOST="${SSH_HOST:-vm-aws-london}"
 REMOTE_DIR="${REMOTE_DIR:-api}"
-DOMAIN="${DOMAIN:-api.farhat.one}"
+DOMAIN="${DOMAIN:-lens-api.farhat.one}"
 
 USE_TLS=false
 [[ "${1:-}" == "--tls" ]] && USE_TLS=true
@@ -24,9 +24,19 @@ USE_TLS=false
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-bold()  { printf '\033[1m%s\033[0m\n' "$1"; }
+# Colour only when a human is reading. Piped into a file, a log or CI, the escape
+# sequences would be written out literally as `[33m` and clutter the output.
+if [[ -t 1 ]]; then
+    C_BOLD=$'\033[1m'; C_RED=$'\033[31m'; C_GREEN=$'\033[32m'
+    C_YELLOW=$'\033[33m'; C_OFF=$'\033[0m'
+else
+    C_BOLD=''; C_RED=''; C_GREEN=''; C_YELLOW=''; C_OFF=''
+fi
+
+bold()  { printf '%s%s%s\n' "$C_BOLD" "$1" "$C_OFF"; }
 info()  { printf '  %s\n' "$1"; }
-fail()  { printf '\033[31mERROR: %s\033[0m\n' "$1" >&2; exit 1; }
+warn()  { printf '%s  %s%s\n' "$C_YELLOW" "$1" "$C_OFF"; }
+fail()  { printf '%sERROR: %s%s\n' "$C_RED" "$1" "$C_OFF" >&2; exit 1; }
 
 # ---------- preflight ----------
 
@@ -36,8 +46,12 @@ git rev-parse --git-dir >/dev/null 2>&1 || fail "not a git repository"
 
 # A dirty tree means the deployed code does not match any commit, so the version
 # label would be a lie. Allowed, but only deliberately.
-if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-    printf '\033[33m  Working tree has uncommitted changes.\033[0m\n'
+#
+# `git status --porcelain` rather than `git diff-index`: the latter trusts cached
+# stat information and reports files as modified when only their mtime changed —
+# a rewrite with identical content is enough to trigger a spurious prompt.
+if [[ -n "$(git status --porcelain)" ]]; then
+    warn "Working tree has uncommitted changes:"
     git status --short | sed 's/^/    /'
     read -r -p "  Deploy anyway? [y/N] " reply
     [[ "$reply" =~ ^[Yy]$ ]] || fail "aborted"
@@ -90,7 +104,7 @@ bold "==> Build & restart"
 ssh -o BatchMode=yes "$SSH_HOST" "
     set -e
     cd ~/$REMOTE_DIR
-    export APP_VERSION='$VERSION'
+    printf 'APP_VERSION=%s\n' '$VERSION' > .env.version
     $COMPOSE build
     $COMPOSE up -d
     # Keep the disk from filling with orphaned layers after repeated deploys.
@@ -102,23 +116,44 @@ ssh -o BatchMode=yes "$SSH_HOST" "
 bold "==> Verify"
 if $USE_TLS; then
     HEALTH_URL="https://$DOMAIN/api/health"
-    RESPONSE="$(curl -fsS --retry 20 --retry-delay 2 --retry-all-errors "$HEALTH_URL" || true)"
+    RESPONSE="$(curl -fsS --retry 20 --retry-delay 2 --retry-all-errors "$HEALTH_URL" 2>/dev/null || true)"
 else
     HEALTH_URL="http://localhost:8000/api/health (from inside the server)"
     RESPONSE="$(ssh -o BatchMode=yes "$SSH_HOST" \
-        "curl -fsS --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors http://localhost:8000/api/health" || true)"
+        "curl -fsS --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors http://localhost:8000/api/health 2>/dev/null" || true)"
 fi
 
 [[ -n "$RESPONSE" ]] || fail "health check returned nothing — check: ssh $SSH_HOST 'cd ~/$REMOTE_DIR && docker compose logs --tail 50'"
 
-info "$HEALTH_URL"
-printf '%s\n' "$RESPONSE" | python3 -m json.tool 2>/dev/null | sed 's/^/    /' \
-    || printf '    %s\n' "$RESPONSE"
+# Rendered as a short table rather than dumped as raw JSON — the point of this
+# step is "is anything broken", which is hard to see in 25 lines of braces.
+printf '%s\n' "$RESPONSE" | python3 -c '
+import json, sys
+for check in json.load(sys.stdin)["checks"]:
+    mark = "ok " if check["healthy"] else "OFF"
+    name = check["name"]
+    detail = check["detail"] or ""
+    print("  [%s] %-9s %s" % (mark, name, detail))
+' 2>/dev/null || printf '    %s\n' "$RESPONSE"
 
-DEPLOYED="$(printf '%s' "$RESPONSE" | python3 -c 'import sys,json; print(json.load(sys.stdin)["version"])' 2>/dev/null || echo '?')"
-if [[ "$DEPLOYED" == "$VERSION" ]]; then
-    printf '\033[32m\n✓ Deployed %s\033[0m\n' "$VERSION"
-else
-    printf '\033[33m\n! Reported version is %s, expected %s — the old container may still be running\033[0m\n' \
+read -r DEPLOYED STATUS <<<"$(
+    printf '%s' "$RESPONSE" |
+    python3 -c 'import sys,json; d=json.load(sys.stdin); print(d["version"], d["status"])' \
+        2>/dev/null || echo '? ?'
+)"
+
+echo
+if [[ "$DEPLOYED" != "$VERSION" ]]; then
+    printf '%s✗  Version mismatch%s\n' "$C_YELLOW" "$C_OFF"
+    printf '   running %s, expected %s — the previous container may not have been replaced\n' \
         "$DEPLOYED" "$VERSION"
+    exit 1
+fi
+
+printf '%s✓  Deployed %s%s\n' "$C_GREEN" "$VERSION" "$C_OFF"
+printf '   health   %s\n' "$STATUS"
+printf '   api      https://%s/api/health\n' "$DOMAIN"
+printf '   docs     https://%s/docs\n' "$DOMAIN"
+if [[ "$STATUS" != "ok" ]]; then
+    printf '   note     some optional services are unconfigured — see the checks above\n'
 fi
