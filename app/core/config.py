@@ -45,7 +45,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
 
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-opus-4-8"
+    # Lightest model in the line-up ($1/$5 per MTok) and the right fit here:
+    # the task is a short classification in the request path, not open-ended
+    # reasoning. Heavier models are a one-line change if quality ever falls short.
+    anthropic_model: str = "claude-haiku-4-5"
 
     # ---------- mail ----------
     smtp_host: str = ""

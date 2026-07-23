@@ -9,7 +9,11 @@ to the shared JSON schema rather than asked politely and parsed hopefully.
 Extended thinking is deliberately left off. Classifying a short contact message
 is not a reasoning-heavy task, and this call sits in the request path with an
 8-second budget — thinking would spend that budget without improving a
-three-field answer. ``effort: low`` is set for the same reason.
+three-field answer.
+
+``output_config`` carries the format only. The ``effort`` knob is *not* sent:
+it is rejected by the lighter models this provider is meant to run on
+(Haiku 4.5), and the heavier ones do not need it for a task this small.
 """
 
 import logging
@@ -57,8 +61,7 @@ class AnthropicAnalyzer:
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": build_user_prompt(payload)}],
             output_config={
-                "format": {"type": "json_schema", "schema": ANALYSIS_JSON_SCHEMA},
-                "effort": "low",
+                "format": {"type": "json_schema", "schema": ANALYSIS_JSON_SCHEMA}
             },
         )
 
