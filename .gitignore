@@ -1,5 +1,6 @@
 # secrets
 .env
+.env.version
 .env.local
 
 # runtime data (logs, sqlite db, rate-limit state)

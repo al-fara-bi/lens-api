@@ -90,7 +90,7 @@ bold "==> Build & restart"
 ssh -o BatchMode=yes "$SSH_HOST" "
     set -e
     cd ~/$REMOTE_DIR
-    export APP_VERSION='$VERSION'
+    printf 'APP_VERSION=%s\n' '$VERSION' > .env.version
     $COMPOSE build
     $COMPOSE up -d
     # Keep the disk from filling with orphaned layers after repeated deploys.
