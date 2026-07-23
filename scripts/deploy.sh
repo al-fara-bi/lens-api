@@ -129,11 +129,11 @@ fi
 # step is "is anything broken", which is hard to see in 25 lines of braces.
 printf '%s\n' "$RESPONSE" | python3 -c '
 import json, sys
-data = json.load(sys.stdin)
-for check in data["checks"]:
+for check in json.load(sys.stdin)["checks"]:
     mark = "ok " if check["healthy"] else "OFF"
+    name = check["name"]
     detail = check["detail"] or ""
-    print(f"  [{mark}] {check[\"name\"]:<9} {detail}")
+    print("  [%s] %-9s %s" % (mark, name, detail))
 ' 2>/dev/null || printf '    %s\n' "$RESPONSE"
 
 read -r DEPLOYED STATUS <<<"$(
