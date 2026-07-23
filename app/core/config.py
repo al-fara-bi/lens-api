@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # quota; Gemini trails because its free tier is unavailable in this project's
     # region, and a failing provider placed first would burn a timeout on every
     # request before the chain moved on.
-    ai_provider_chain: str = "anthropic,openai,gemini"
+    ai_provider_chain: str = "groq,openai,anthropic,gemini"
     ai_timeout_seconds: float = 8.0
 
     gemini_api_key: str = ""
@@ -47,6 +47,11 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
+
+    groq_api_key: str = ""
+    # One of the two Groq models that support strict json_schema decoding; the
+    # smaller of the pair, which is plenty for a short classification.
+    groq_model: str = "openai/gpt-oss-20b"
 
     anthropic_api_key: str = ""
     # Lightest model in the line-up ($1/$5 per MTok) and the right fit here:

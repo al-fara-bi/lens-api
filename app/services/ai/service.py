@@ -28,9 +28,13 @@ logger = logging.getLogger(__name__)
 
 # Provider SDKs raise exceptions carrying the whole HTTP error body. A single
 # Gemini 429 is ~2 KB of quota JSON, logged once per attempt — enough repeated
-# failures and the log file is mostly boilerplate. The leading part identifies
-# the problem; the rest is documentation links.
-MAX_PROVIDER_ERROR_CHARS = 300
+# failures and the log file is mostly boilerplate.
+#
+# 600 rather than something tighter: the first ~300 characters of a Google error
+# are generic advice and documentation links, and the part that actually says
+# *why* (`limit: 0, model: ...`) comes right after. Cutting at 300 kept only the
+# boilerplate and threw away the diagnosis.
+MAX_PROVIDER_ERROR_CHARS = 600
 
 
 def _short(exc: Exception) -> str:
@@ -92,12 +96,14 @@ def build_ai_service(settings: Settings) -> AIService:
     """Assemble the chain from AI_PROVIDER_CHAIN, preserving configured order."""
     from app.services.ai.anthropic_provider import AnthropicAnalyzer
     from app.services.ai.gemini import GeminiAnalyzer
+    from app.services.ai.groq import GroqAnalyzer
     from app.services.ai.openai_provider import OpenAIAnalyzer
 
     registry: dict[str, type] = {
-        "gemini": GeminiAnalyzer,
+        "groq": GroqAnalyzer,
         "openai": OpenAIAnalyzer,
         "anthropic": AnthropicAnalyzer,
+        "gemini": GeminiAnalyzer,
     }
 
     providers: list[AIAnalyzer] = []
