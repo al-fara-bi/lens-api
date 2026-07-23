@@ -40,7 +40,9 @@ CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 [[ "$CURRENT_BRANCH" == "$DEV_BRANCH" ]] \
     || fail "releases are cut from '$DEV_BRANCH', but you are on '$CURRENT_BRANCH'"
 
-git diff-index --quiet HEAD -- \
+# Same reason as in deploy.sh: git diff-index trusts cached stat data and flags
+# files whose mtime changed but whose content did not.
+[[ -z "$(git status --porcelain)" ]] \
     || fail "working tree is dirty — commit or stash first"
 
 # ---------- version ----------
